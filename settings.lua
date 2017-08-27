@@ -15,15 +15,39 @@ data:extend(
 	name = "production-monitor-large",
 	setting_type = "runtime-per-user",
     default_value = false,
-	order = "a",
+	order = "a0",
+   },
+	{
+	type = "bool-setting",
+	name = "production-monitor-show-production",
+	setting_type = "runtime-per-user",
+    default_value = true,
+	order = "a1",
+   },
+   	{
+	type = "bool-setting",
+	name = "production-monitor-show-consumption",
+	setting_type = "runtime-per-user",
+    default_value = true,
+	order = "a2",
+   },
+   	{
+	type = "int-setting",
+	name = "production-monitor-precision",
+	setting_type = "runtime-per-user",
+	default_value = 1,
+	minimum_value = 1,
+	maximum_value = 10,
+	order = "b1",
    },
    {
 	type = "bool-setting",
 	name = "production-monitor-top",
 	setting_type = "runtime-per-user",
     default_value = false,
-	order = "b",
+	order = "c1",
    },
+
     {
 	type = "int-setting",
 	name = "production-monitor-columns",
@@ -31,7 +55,7 @@ data:extend(
 	default_value = 1,
 	minimum_value = 1,
 	maximum_value = 100,
-	order = "c",
+	order = "c2",
    },
 }
 )
