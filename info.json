@@ -3,7 +3,7 @@
   "version": "0.15.0",
   "title": "Production Statistics Monitor HUD",
   "author": "Peppe",
-  "description": "Customize and monitor production statistics",
+  "description": "Pin Items/Fluids to HUD to view production statistics. ",
   "factorio_version": "0.15",
   "dependencies": ["base >= 0.15"]
 }
