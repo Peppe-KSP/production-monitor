@@ -39,7 +39,7 @@ data.raw["gui-style"].default.stats_table_style =
         priority = "extra-high-no-scale",
         corner_size = {0, 0},
         position = {78, 18},
-        opacity = 0.8
+        opacity = 0.2
       }
 
     }
@@ -67,7 +67,7 @@ data.raw["gui-style"].default.stats_table_style_large =
         priority = "extra-high-no-scale",
         corner_size = {0, 0},
         position = {78, 18},
-        opacity = 0.8
+        opacity = 0.4
       }
 
     }

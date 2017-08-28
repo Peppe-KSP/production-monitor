@@ -4,11 +4,12 @@ local tickRate = settings.global["production-monitor-update-seconds"].value * 60
 local perMinute = 3600 / tickRate
 local noValue = "-"
 local displayUoM = "/m"
-local minValue = .01
 local settingsIcon = "add"
 local downTrend = {r=1, g=.8, b=.8}
 local upTrend = {r=.8, g=1, b=.8}
 local flatTrend = {r=1, g=1, b=1}
+local warning = {r=.7, g=.7, b=0}
+local redLight = {r=1, g=.2, b=.2}
 
 script.on_init(function(event)
 	global.stats = {}
@@ -17,7 +18,12 @@ end)
 
 script.on_event(defines.events.on_tick, function(event)
 	if (game.tick % tickRate == 0) then
-		tickRate = settings.global["production-monitor-update-seconds"].value * 60
+		local checkTickRate = settings.global["production-monitor-update-seconds"].value * 60
+		if checkTickRate ~= tickRate then
+			tickRate = checkTickRate
+			perMinute = 3600 / tickRate
+		end
+
 		for k, force in pairs(game.forces) do
 			updateStats (force)
 		end
@@ -29,9 +35,6 @@ script.on_configuration_changed(function(data)
      	for k, force in pairs(game.forces) do
 			updateStats (force, true)
 			for _, player in pairs(force.players) do
-				local showProduction = player.mod_settings["production-monitor-show-production"].value
-				local showConsumption = player.mod_settings["production-monitor-show-consumption"].value
-
 				local itemFlowTop = player.gui.top.stats_item_flow
 				local itemFlowLeft = player.gui.left.stats_item_flow
 				
@@ -203,12 +206,37 @@ end
 function updateDisplayForce (force, stats)
 	for _, player in pairs(force.players) do
 		if (player.valid and player.connected) then
-			updateDisplayPlayer(player, force.name, stats)
+			updateDisplayPlayer(player, force.name, stats, playerModSettings(player))
 		end
 	end
 end
 
-function updateDisplayPlayer (player, forceName, stats)
+function playerModSettings (player)
+	local mod_settings = {}
+		mod_settings["production-monitor-show-production"] 	= player.mod_settings["production-monitor-show-production"].value
+		mod_settings["production-monitor-show-consumption"] = player.mod_settings["production-monitor-show-consumption"].value
+		mod_settings["production-monitor-show-ratio"] 		= player.mod_settings["production-monitor-show-ratio"].value
+		mod_settings["production-monitor-large"] 			= player.mod_settings["production-monitor-large"].value
+		mod_settings["production-monitor-top"] 				= player.mod_settings["production-monitor-top"].value
+		mod_settings["production-monitor-precision"] 		= player.mod_settings["production-monitor-precision"].value
+		mod_settings["production-monitor-columns"] 			= player.mod_settings["production-monitor-columns"].value
+		
+
+		mod_settings.fieldCount = 1
+		if mod_settings["production-monitor-show-production"] then
+			mod_settings.fieldCount = mod_settings.fieldCount + 1
+		end
+		if mod_settings["production-monitor-show-consumption"] then
+			mod_settings.fieldCount = mod_settings.fieldCount + 1
+		end
+		if mod_settings["production-monitor-show-ratio"] then
+			mod_settings.fieldCount = mod_settings.fieldCount + 1
+		end
+
+	return mod_settings
+end
+
+function updateDisplayPlayer (player, forceName, stats, mod_settings)
 	if (not stats) then 
 		stats = {}
 		stats.items = global.stats[forceName].items
@@ -226,36 +254,46 @@ function updateDisplayPlayer (player, forceName, stats)
 	local empty = true
 
 	for _, itemName in pairs (player_settings.items) do
-		local rate = 			calcRate(stats.items[itemName], global.stats[forceName].items[itemName])
-		local rateConsumed =  	calcRate(stats.itemsConsumed[itemName], global.stats[forceName].itemsConsumed[itemName])
-		addUpdateDisplay(itemName, player, rate, rateConsumed)
+		local calc = {}
+		calc.rate = 			calcRate(stats.items[itemName], global.stats[forceName].items[itemName])
+		calc.rateConsumed =  	calcRate(stats.itemsConsumed[itemName], global.stats[forceName].itemsConsumed[itemName])
+		calc.ratio = calcRatio(calc.rate, calc.rateConsumed)
+		addUpdateDisplay(itemName, player, calc, mod_settings)
 		empty = false
 	end
 
 	for _, fluidName in pairs (player_settings.fluids) do
-		local rate = 			calcRate(stats.fluids[fluidName], global.stats[forceName].fluids[fluidName])
-		local rateConsumed =  	calcRate(stats.fluidsConsumed[fluidName], global.stats[forceName].fluidsConsumed[fluidName])
-		addUpdateDisplay(fluidName, player, rate, rateConsumed)
+		local calc = {}
+		calc.rate = 			calcRate(stats.fluids[fluidName], global.stats[forceName].fluids[fluidName])
+		calc.rateConsumed =  	calcRate(stats.fluidsConsumed[fluidName], global.stats[forceName].fluidsConsumed[fluidName])
+		calc.ratio = calcRatio(calc.rate, calc.rateConsumed)
+		addUpdateDisplay(fluidName, player, calc, mod_settings)
 		empty = false
 	end
 
 	if (empty) then
-		local showProduction = player.mod_settings["production-monitor-show-production"].value
-		local showConsumption = player.mod_settings["production-monitor-show-consumption"].value
-		minDisplay(player, showProduction, showConsumption)
+		minDisplay(player, mod_settings)
 	end
 end
 
 function calcRate (new, old)
-	if old then
+	if old and new then
 		return (new - old) * perMinute
 	end
 	return noValue
 end
 
-function getAttachLocation (player)
+function calcRatio (production, consumption)
+	if production and production ~= noValue and consumption and consumption ~= noValue and consumption > 0 then
+		return (production / consumption)
+	end
+	return noValue
+end
+
+
+function getAttachLocation (isTop)
 	local location = "left"
-	if (player.mod_settings["production-monitor-top"].value) then
+	if isTop then
 		location = "top"
 	end
 	return location
@@ -285,22 +323,20 @@ function getTableStyle (large)
 	return style
 end
 
-function minDisplay (player, showProduction, showConsumption)
-	local large = player.mod_settings["production-monitor-large"].value
+function minDisplay (player, mod_settings)
+	local attachLocation = getAttachLocation(mod_settings["production-monitor-top"])
 
-	local attachLocation = getAttachLocation(player)
+	local large = mod_settings["production-monitor-large"]
 	local buttonStyle = getButtonStyle(large)
 	local labelStyle = getLabelStyle(large)
 	local tableStyle = getTableStyle(large)
+	local showProduction = mod_settings["production-monitor-show-production"]
+	local showConsumption = mod_settings["production-monitor-show-consumption"]
+	local showRatio = mod_settings["production-monitor-show-ratio"]
 
-	local fieldCount = 1
-	if player.mod_settings["production-monitor-show-production"].value then
-		fieldCount = fieldCount + 1
-	end
-	if player.mod_settings["production-monitor-show-consumption"].value then
-		fieldCount = fieldCount + 1
-	end
-	local playerColspan =  player.mod_settings["production-monitor-columns"].value * fieldCount
+
+
+	local playerColspan =  mod_settings["production-monitor-columns"] * mod_settings.fieldCount
 	local itemFlowTop = player.gui.top.stats_item_flow
 	local itemFlowLeft = player.gui.left.stats_item_flow
 	local item_flow
@@ -319,7 +355,7 @@ function minDisplay (player, showProduction, showConsumption)
 
 	if not item_flow then
 		item_flow = player.gui[attachLocation].add{type = "scroll-pane", name = "stats_item_flow"}
-		local item_table = item_flow.add{type = "table", colspan = playerColspan, name = "stats_item_table", style=tableStyle}
+		local item_table = item_flow.add{type = "table", colspan = playerColspan, name = "stats_item_table_"..playerColspan, style=tableStyle}
 
 		item_table.add{type = "sprite-button", name = "stats_show_settings", tooltip={"stats_show_settings_tip"}, 
 			sprite=settingsIcon, style = buttonStyle}
@@ -331,23 +367,35 @@ function minDisplay (player, showProduction, showConsumption)
 			item_table.add{type = "label", name = "stats_item_label_settings_consumed", caption = "-"..displayUoM, 
 				style= labelStyle, tooltip={"stats_consumed"} }
 		end
-	end	
+
+		if showRatio then
+			item_table.add{type = "label", name = "stats_item_label_settings_ratio", caption = "P/C", 
+			style= labelStyle, tooltip={"stats_ratio"} }
+		end
+	else
+		if not item_flow["stats_item_table_"..playerColspan] then			
+			item_flow.destroy()
+			updateDisplayPlayer(player, player.force.name, nil, mod_settings)
+		end
+	end
 end
 
-function addUpdateDisplay(itemName, player, rate, rateConsumed)
+function addUpdateDisplay(itemName, player, calc, mod_settings)
 
-	local showProduction = player.mod_settings["production-monitor-show-production"].value
-	local showConsumption = player.mod_settings["production-monitor-show-consumption"].value
-	local precision = player.mod_settings["production-monitor-precision"].value
+	local showProduction = mod_settings["production-monitor-show-production"]
+	local showConsumption = mod_settings["production-monitor-show-consumption"]
+	local showRatio = mod_settings["production-monitor-show-ratio"]
 
-	minDisplay(player, showProduction, showConsumption)
+	local precision = mod_settings["production-monitor-precision"]
+
+	minDisplay(player, mod_settings)
 
 	local sprite
 	local btnName
 	local localised_name = {itemName}
-	local attachLocation = getAttachLocation(player)
+	local attachLocation = getAttachLocation(mod_settings["production-monitor-top"])
 
-	local large = player.mod_settings["production-monitor-large"].value
+	local large = mod_settings["production-monitor-large"]
 	local buttonStyle = getButtonStyle(large)
 	local labelStyle = getLabelStyle(large)
 
@@ -361,21 +409,29 @@ function addUpdateDisplay(itemName, player, rate, rateConsumed)
 		btnName = "stats_fluid_button_".. itemName
 	end
 
-	local table = player.gui[attachLocation].stats_item_flow.stats_item_table	
+	local playerColspan =  mod_settings["production-monitor-columns"] * mod_settings.fieldCount
+	local table = player.gui[attachLocation].stats_item_flow["stats_item_table_"..playerColspan]
 	if btnName and not table[btnName] then
 		table.add{type = "sprite-button", name = btnName, tooltip=localised_name, sprite = sprite, style = buttonStyle}
 
 		if (showProduction) then
 			local labelName = "stats_item_label_created_" .. itemName
 			if not table[labelName] then
-				table.add{type = "label", name = labelName,  tooltip=localised_name, caption = rate, style=labelStyle}
+				table.add{type = "label", name = labelName,  tooltip=localised_name, caption = calc.rate, style=labelStyle}
 			end
 		end
 
 		if (showConsumption) then
 			local labelName = "stats_item_label_consumed_" .. itemName
 			if not table[labelName] then
-				table.add{type = "label", name = labelName,  tooltip=localised_name, caption = rateConsumed, style=labelStyle}
+				table.add{type = "label", name = labelName,  tooltip=localised_name, caption = calc.rateConsumed, style=labelStyle}
+			end
+		end
+
+		if (showRatio) then
+			local labelName = "stats_item_label_ratio_" .. itemName
+			if not table[labelName] then
+				table.add{type = "label", name = labelName,  tooltip=localised_name, caption = calc.ratio, style=labelStyle}
 			end
 		end
 
@@ -411,57 +467,82 @@ function addUpdateDisplay(itemName, player, rate, rateConsumed)
 			removeFluid(player, itemName)
 		else
 			if (showProduction) then
-				updateDisplayLabel(table["stats_item_label_created_" .. itemName], rate, precision)
+				updateDisplayLabel(table["stats_item_label_created_" .. itemName], calc.rate, precision, false)
 			end
 
 			if (showConsumption) then
-				updateDisplayLabel(table["stats_item_label_consumed_" .. itemName], rateConsumed, precision)
+				updateDisplayLabel(table["stats_item_label_consumed_" .. itemName], calc.rateConsumed, precision, false)
 			end
 			
+			if (showRatio) then
+				updateDisplayLabel(table["stats_item_label_ratio_" .. itemName], calc.ratio, precision, true)
+			end
 		end
 	end
 end
 
-function updateDisplayLabel (label, value, precision)
+function applyTrend (label, smoothValue, rawCaption)
+	if (smoothValue > rawCaption) then
+		label.style.font_color = upTrend
+	elseif (smoothValue < rawCaption) then
+		label.style.font_color = downTrend
+	else
+		label.style.font_color = flatTrend
+	end
+end
+
+function applyStopLight  (label, smoothValue, minValue)
+	minValue = minValue / 10
+	if smoothValue >= (1 + minValue) then
+		label.style.font_color = upTrend
+	elseif smoothValue < .35 then
+		label.style.font_color = redLight
+	elseif smoothValue < .65 then
+		label.style.font_color = downTrend
+	elseif smoothValue < (1 - minValue) then
+		label.style.font_color = warning
+	else
+		label.style.font_color = flatTrend
+	end
+
+end
+
+function updateDisplayLabel (label, value, precision, useStopLight)
 	if label then
 		local currentCaption = label.caption
-		if (currentCaption ~= noValue and currentCaption:sub(1) ~= displayUoM) then
-			local rawCaption = tonumber( removeComma(currentCaption) )
-			local smoothValue =  (rawCaption + value) / 2 
+		if value ~= noValue and currentCaption ~= noValue then
+			local rawCaption = removeFmt(currentCaption)
+			local smoothValue =  (rawCaption + value) / 2
+			local minValue = 5 / (math.pow(10, precision))
 			if (smoothValue > minValue) then
-				if (smoothValue > rawCaption) then
-					label.style.font_color = upTrend
-				elseif (smoothValue < rawCaption) then
-					label.style.font_color = downTrend
+				if useStopLight then
+					applyStopLight (label, smoothValue, minValue)
 				else
-					label.style.font_color = flatTrend
-				end
-					label.caption = fmtNumber( round(smoothValue, precision) )
+					applyTrend (label, smoothValue, rawCaption)
+				end				
+				label.caption = fmtNumber( smoothValue, precision )
 			else
+				if useStopLight then
+					label.style.font_color = redLight
+				end
 				label.caption = 0
 			end
 		else
-			label.caption = fmtNumber(value)
+			label.style.font_color = flatTrend
+			label.caption = fmtNumber(value, precision)
 		end
 	end
 end
 
 script.on_event(defines.events.on_gui_click, function(event)
 	local player = game.players[event.player_index]
-
-	local attachLocation = getAttachLocation(player)
-	local flow = player.gui[attachLocation].stats_item_flow
-	if (not flow) then
-		updateDisplayPlayer(player, player.force.name)
-	end
 	local center = player.gui.center.stats_center_frame
 	local button = event.button
 	if event.element.valid then 
 		if event.element.name == "stats_show_settings" then
 			if player.cursor_stack.valid_for_read then
 				addItem(player, player.cursor_stack.name)
-				flow.destroy()
-				updateDisplayPlayer(player, player.force.name)
+				resetGuiEvent(player)
 			else
 				if (not center) then
 					center = player.gui.center.add{type = "frame", name = "stats_center_frame", direction = "vertical"}
@@ -477,8 +558,7 @@ script.on_event(defines.events.on_gui_click, function(event)
 		elseif event.element.name:find("stats_fluid_selector_") then
 			addFluid (player, event.element.name:sub(22))
 			center.destroy()
-			flow.destroy()
-			updateDisplayPlayer(player, player.force.name)
+			resetGuiEvent(player)
 		elseif event.element.name:find("stats_fluid_button_") then
 			local name = event.element.name:sub(20)
 			-- middle click removes
@@ -491,8 +571,7 @@ script.on_event(defines.events.on_gui_click, function(event)
 				-- to the bottom
 				addFluid (player, name, index+1)
 			end
-			flow.destroy()
-			updateDisplayPlayer(player, player.force.name)
+			resetGuiEvent(player)
 		elseif event.element.name:find("stats_item_button_") then
 			local name = event.element.name:sub(19)
 			-- middle click removes
@@ -509,12 +588,21 @@ script.on_event(defines.events.on_gui_click, function(event)
 					addItem (player, name, index+1)
 				end
 			end
-
-			flow.destroy()
-			updateDisplayPlayer(player, player.force.name)
+			resetGuiEvent(player)
 		end
 	end
 end)
+
+function resetGuiEvent (player)
+	local mod_settings = playerModSettings(player)
+	local attachLocation = getAttachLocation(mod_settings["production-monitor-top"])
+	local flow = player.gui[attachLocation].stats_item_flow
+
+	if flow then
+		flow.destroy()
+	end
+	updateDisplayPlayer(player, player.force.name, nil, mod_settings)
+end
 
 function debugPrint(thing)
 	for _, player in pairs(game.players) do
@@ -523,16 +611,40 @@ function debugPrint(thing)
 end
 
 
-function fmtNumber(amount)
-	if not amount then
-		return
+function fmtNumber(amount, precision)
+
+	if not amount or amount == noValue then
+		return amount
 	end
-	local formatted = amount
+	
+	local million
+	local thousand
+
+	--debugPrint(amount)
+	if amount > 1000000 then
+		million = true
+		amount = amount / 1000000
+		precision = precision + 1
+	elseif amount > 1000 then
+		thousand = true
+		amount = amount / 1000
+		--precision = precision + 1
+	end
+	
+	local formatted = round(amount, precision)
 	while true do  
 		formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
 		if (k==0) then
 		break
 		end
+	end
+
+	if million then
+		return formatted.."M"
+	end
+
+	if thousand then
+		return formatted.."k"
 	end
 	return formatted
 end
@@ -545,13 +657,41 @@ function round(val, decimal)
   end
 end
 
-function removeComma(amount)
-  local formatted = amount
-  while true do  
-    formatted, k = string.gsub(formatted, ",", "")
-    if (k==0) then
-      break
-    end
-  end
-  return formatted
+function removeFmt(amount)
+  	local million
+	local thousand
+	local formatted = amount
+	while true do  
+		formatted, k = string.gsub(formatted, ",", "")
+		if (k==0) then
+		break
+		end
+	end
+
+	local original = formatted
+	while true do
+		formatted, k = string.gsub(formatted, "k", "")
+		if (k==0) then
+			break
+		end
+	end
+
+	if original ~= formatted then
+		thousand = true
+		return tonumber(formatted ) * 1000
+	end
+
+	while true do
+		formatted, k = string.gsub(formatted, "M", "")
+		if (k==0) then
+			break
+		end
+	end
+
+	if original ~= formatted then
+		million = true
+		return tonumber(formatted ) * 1000 * 1000
+	end	 
+
+	return tonumber(formatted)
 end

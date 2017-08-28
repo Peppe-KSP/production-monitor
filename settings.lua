@@ -31,6 +31,13 @@ data:extend(
     default_value = true,
 	order = "a2",
    },
+	{
+	type = "bool-setting",
+	name = "production-monitor-show-ratio",
+	setting_type = "runtime-per-user",
+    default_value = true,
+	order = "a3",
+   },
    	{
 	type = "int-setting",
 	name = "production-monitor-precision",
