@@ -1,9 +1,9 @@
 {
   "name": "production-monitor",
-  "version": "0.15.4",
+  "version": "0.15.7",
   "title": "Production Statistics Monitor HUD",
   "author": "Peppe",
-  "description": "Pin Items/Fluids to HUD to view production statistics. ",
+  "description": "Pin Items/Fluids to HUD to view production statistics, ratios, differentials. Quick open/close, customize order, location, precision. ",
   "factorio_version": "0.15",
   "dependencies": ["base >= 0.15"]
 }
