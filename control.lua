@@ -525,6 +525,11 @@ function addUpdateDisplay(itemName, player, mod_settings, calc, calcPrev)
 		removeItem(player, itemName)
 		removeFluid(player, itemName)
 	else
+
+		if not calc then
+			calc = {}
+		end
+
 		if not calcPrev then
 			calcPrev = calc
 		end
