@@ -217,45 +217,50 @@ end
 
 function playerModSettings (player)
 	local mod_settings = {}
-		mod_settings["production-monitor-show-production"] 	= player.mod_settings["production-monitor-show-production"].value
-		mod_settings["production-monitor-show-consumption"] = player.mod_settings["production-monitor-show-consumption"].value
-		mod_settings["production-monitor-show-difference"] 	= player.mod_settings["production-monitor-show-difference"].value
-		mod_settings["production-monitor-show-ratio"] 		= player.mod_settings["production-monitor-show-ratio"].value
-		
-		mod_settings["production-monitor-large"] 			= player.mod_settings["production-monitor-large"].value
-		mod_settings["production-monitor-top"] 				= player.mod_settings["production-monitor-top"].value
-		mod_settings["production-monitor-precision"] 		= player.mod_settings["production-monitor-precision"].value
-		mod_settings["production-monitor-columns"] 			= player.mod_settings["production-monitor-columns"].value
-		
+	mod_settings["production-monitor-show-production"] 	= player.mod_settings["production-monitor-show-production"].value
+	mod_settings["production-monitor-show-consumption"] = player.mod_settings["production-monitor-show-consumption"].value
+	mod_settings["production-monitor-show-difference"] 	= player.mod_settings["production-monitor-show-difference"].value
+	mod_settings["production-monitor-show-ratio"] 		= player.mod_settings["production-monitor-show-ratio"].value
+	
+	mod_settings["production-monitor-large"] 			= player.mod_settings["production-monitor-large"].value
+	mod_settings["production-monitor-top"] 				= player.mod_settings["production-monitor-top"].value
+	mod_settings["production-monitor-precision"] 		= player.mod_settings["production-monitor-precision"].value
+	mod_settings["production-monitor-columns"] 			= player.mod_settings["production-monitor-columns"].value
+	
 
-		mod_settings.fieldCount = 1
-		if mod_settings["production-monitor-show-production"] then
-			mod_settings.fieldCount = mod_settings.fieldCount + 1
-		end
-		if mod_settings["production-monitor-show-consumption"] then
-			mod_settings.fieldCount = mod_settings.fieldCount + 1
-		end
-		if mod_settings["production-monitor-show-difference"] then
-			mod_settings.fieldCount = mod_settings.fieldCount + 1
-		end
-		if mod_settings["production-monitor-show-ratio"] then
-			mod_settings.fieldCount = mod_settings.fieldCount + 1
-		end
+	mod_settings.fieldCount = 1
+	local tableString = "stats_item_table_"
+	if mod_settings["production-monitor-show-production"] then
+		mod_settings.fieldCount = mod_settings.fieldCount + 1
+		tableString = tableString .. "p"
+	end
+	if mod_settings["production-monitor-show-consumption"] then
+		mod_settings.fieldCount = mod_settings.fieldCount + 1
+		tableString = tableString .. "c"
+	end
+	if mod_settings["production-monitor-show-difference"] then
+		mod_settings.fieldCount = mod_settings.fieldCount + 1
+		tableString = tableString .. "d"
+	end
+	if mod_settings["production-monitor-show-ratio"] then
+		mod_settings.fieldCount = mod_settings.fieldCount + 1
+		tableString = tableString .. "r"
+	end
 
+	if mod_settings["production-monitor-large"] then
+		tableString = tableString .. "_large_"
+	else
+		tableString = tableString .. "_small_"
+	end
 
-		mod_settings.playerColspan = mod_settings["production-monitor-columns"] * mod_settings.fieldCount
+	mod_settings.playerColspan = mod_settings["production-monitor-columns"] * mod_settings.fieldCount
 
-		if mod_settings["production-monitor-large"] then
-			mod_settings.tableId = "stats_item_table_large_" .. mod_settings.playerColspan
-		else
-			mod_settings.tableId = "stats_item_table_small_" .. mod_settings.playerColspan
-		end
+	mod_settings.tableId = tableString .. mod_settings.playerColspan
 
 	return mod_settings
 end
 
 function updateDisplayPlayer (player, forceName, stats, mod_settings)
-	local isHidden = global.stats.playerPrefs[player.name].hide
 	local wasReset = false
 
 	if (not stats) then 
@@ -267,6 +272,7 @@ function updateDisplayPlayer (player, forceName, stats, mod_settings)
 		addPlayer(player)
 		player_settings = global.stats.playerPrefs[player.name]
 	end
+	local isHidden = global.stats.playerPrefs[player.name].hide
 
 	if not player_settings.itemStats then
 		player_settings.itemStats = {}
@@ -347,7 +353,6 @@ function calcRatio (production, consumption)
 	end
 	return nil
 end
-
 
 function getAttachLocation (isTop)
 	local location = "left"
