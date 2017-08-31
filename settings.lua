@@ -9,7 +9,14 @@ data:extend(
 	maximum_value = 3600,
 	order = "a",
    },
-
+   {
+	type = "string-setting",
+	name = "production-monitor-modifier",
+	setting_type = "runtime-per-user",
+    default_value = "shift",
+	allowed_values = {"control", "alt", "shift", "none"},
+	order = "a",
+   },
    {
 	type = "bool-setting",
 	name = "production-monitor-large",
@@ -49,7 +56,7 @@ data:extend(
 	type = "int-setting",
 	name = "production-monitor-precision",
 	setting_type = "runtime-per-user",
-	default_value = 1,
+	default_value = 0,
 	minimum_value = 0,
 	maximum_value = 10,
 	order = "b1",

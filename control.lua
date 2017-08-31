@@ -217,6 +217,8 @@ end
 
 function playerModSettings (player)
 	local mod_settings = {}
+	
+	mod_settings.modifier								= player.mod_settings["production-monitor-modifier"].value
 	mod_settings["production-monitor-show-production"] 	= player.mod_settings["production-monitor-show-production"].value
 	mod_settings["production-monitor-show-consumption"] = player.mod_settings["production-monitor-show-consumption"].value
 	mod_settings["production-monitor-show-difference"] 	= player.mod_settings["production-monitor-show-difference"].value
@@ -226,6 +228,7 @@ function playerModSettings (player)
 	mod_settings["production-monitor-top"] 				= player.mod_settings["production-monitor-top"].value
 	mod_settings["production-monitor-precision"] 		= player.mod_settings["production-monitor-precision"].value
 	mod_settings["production-monitor-columns"] 			= player.mod_settings["production-monitor-columns"].value
+
 	
 
 	mod_settings.fieldCount = 1
@@ -634,15 +637,44 @@ function updateDisplayLabel (label, value, oldValue, precision, style)
 	end
 end
 
+function checkModifier (modifierType, ctr, alt, shift)
+	if modifierType == "control" then
+		return ctr
+	end
+	if modifierType == "alt" then
+		return alt
+	end
+	if modifierType == "shift" then
+		return shift
+	end
+	return false
+end
+
+
+
 script.on_event(defines.events.on_gui_click, function(event)
 	local player = game.players[event.player_index]
+	
 	local center = player.gui.center.stats_center_frame
 	local button = event.button
-	if event.element.valid then 
+	local alt = event.alt
+	local ctr = event.control
+	local shift = event.shift
+
+	if event.element.valid then
+		local mod_settings
+		local applyModifer
+		local productionMonitorEvent
+		if event.element.name == "stats_show_settings" or event.element.name:find("stats_") then
+			mod_settings = playerModSettings(player)
+			productionMonitorEvent = true
+			applyModifer = checkModifier(mod_settings.modifier, ctr, alt, shift)
+		end
+
 		if event.element.name == "stats_show_settings" then
 			if player.cursor_stack.valid_for_read then
 				addItem(player, player.cursor_stack.name)
-				resetGuiEvent(player)
+				productionMonitorEvent=true
 			else
 				if button == defines.mouse_button_type.left then
 					if (not center) then
@@ -662,26 +694,28 @@ script.on_event(defines.events.on_gui_click, function(event)
 					else
 						global.stats.playerPrefs[player.name].hide = true
 					end
-					resetGuiEvent(player)
+					productionMonitorEvent=true
 				end
 			end
 		elseif event.element.name:find("stats_fluid_selector_") then
 			addFluid (player, event.element.name:sub(22))
 			center.destroy()
-			resetGuiEvent(player)
+			productionMonitorEvent=true
 		elseif event.element.name:find("stats_fluid_button_") then
 			local name = event.element.name:sub(20)
 			-- middle click removes
 			local index = getFluidIndex(player, name)
 			removeFluid(player, name)
-			if (button == defines.mouse_button_type.left) then
+			if button == defines.mouse_button_type.middle or applyModifer then
+				-- do nothing
+			elseif button == defines.mouse_button_type.left  then
 				-- to the top
 				addFluid (player, name, index-1)
-			elseif (button == defines.mouse_button_type.right) then
+			elseif button == defines.mouse_button_type.right then
 				-- to the bottom
 				addFluid (player, name, index+1)
 			end
-			resetGuiEvent(player)
+			productionMonitorEvent=true
 		elseif event.element.name:find("stats_item_button_") then
 			local name = event.element.name:sub(19)
 			-- middle click removes
@@ -690,21 +724,28 @@ script.on_event(defines.events.on_gui_click, function(event)
 			else
 				local index = getItemIndex(player, name)
 				removeItem(player, name)
-				if (button == defines.mouse_button_type.left) then
+				if button == defines.mouse_button_type.middle or applyModifer then
+					-- do nothing
+				elseif button == defines.mouse_button_type.left then
 					-- to the top
 					addItem (player, name, index-1)
-				elseif (button == defines.mouse_button_type.right) then
+				elseif button == defines.mouse_button_type.right then
 					-- to the bottom
 					addItem (player, name, index+1)
 				end
 			end
-			resetGuiEvent(player)
+			productionMonitorEvent=true
+		end
+
+		if productionMonitorEvent then
+			resetGuiEvent (player, mod_settings)
 		end
 	end
+
+
 end)
 
-function resetGuiEvent (player)
-	local mod_settings = playerModSettings(player)
+function resetGuiEvent (player, mod_settings)
 	local attachLocation = getAttachLocation(mod_settings["production-monitor-top"])
 	local flow = player.gui[attachLocation].stats_item_flow
 
@@ -730,14 +771,14 @@ function fmtNumber(amount, precision)
 	local thousand
 
 	--debugPrint(amount)
-	if amount >= 1000000 then
+	if math.abs(amount) >= 1000000 then
 		million = true
 		amount = amount / 1000000
-		precision = precision + 1
-	elseif amount >= 1000 then
+		precision = precision + 2
+	elseif  math.abs(amount) >= 1000 then
 		thousand = true
 		amount = amount / 1000
-		--precision = precision + 1
+		precision = precision + 1
 	end
 	
 	local formatted = round(amount, precision)
