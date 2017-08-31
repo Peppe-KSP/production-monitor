@@ -51,41 +51,37 @@ script.on_configuration_changed(function(data)
    end
  end)
 
+function strSplit(inputstr, sep)
+        if sep == nil then
+                sep = "%s"
+        end
+        local t={} ; i=1
+        for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+                t[i] = trim(str)
+                i = i + 1
+        end
+        return t
+end
+
+function trim(s)
+  return (s:gsub("^%s*(.-)%s*$", "%1"))
+end
 
 function addPlayer(player)	
 	global.stats.playerPrefs[player.name] = {}
-	
-	local defaultItems = {
-		"science-pack-1",
-		"science-pack-2",
-		"science-pack-3",
-		"military-science-pack",
-		"production-science-pack",
-		"high-tech-science-pack",
-		"space-science-pack",
-		}
 
-	if (game.active_mods["bobtech"]) then
-		table.insert(defaultItems, 4, "logistic-science-pack")
-	end
-		
+	local playerItems = player.mod_settings["production-monitor-default-items"].value
+	local defaultItems = strSplit(playerItems, ",")		
 	global.stats.playerPrefs[player.name].items = defaultItems
 
-	local defaultFluids = {
-		"crude-oil",
-		"petroleum-gas",
-		}
 
-	if (game.active_mods["angelspetrochem"]) then
-		table.insert(defaultFluids, "liquid-multi-phase-oil")
-	end
-
+	local playerFluids = player.mod_settings["production-monitor-default-fluids"].value
+	local defaultFluids = strSplit(playerFluids, ",")
 	global.stats.playerPrefs[player.name].fluids = defaultFluids
 
 	global.stats.playerPrefs[player.name].itemStats = {}
 	global.stats.playerPrefs[player.name].fluidStats = {}
 	global.stats.playerPrefs[player.name].hide = false
-
 end
 
 function removeItem (player, itemToRemove)
@@ -159,7 +155,7 @@ function replaceItem (player, itemToAdd, existingItem)
 	local items = global.stats.playerPrefs[player.name].items
 	for i, name in ipairs(items) do
     	if (name == itemToAdd) then
-			return
+			table.remove(items, i)
 		end
 	end
 	for i, name in ipairs(items) do
@@ -491,6 +487,7 @@ function addUpdateDisplay(itemName, player, mod_settings, calc, calcPrev)
 	local table = player.gui[attachLocation].stats_item_flow[mod_settings.tableId]
 	
 	if (sprite == nil) then
+		logToPlayer(player, "Invalid Item/Fluid Removed : " .. itemName)
 		if btnName and table[btnName] then
 			table[btnName].destroy()
 		else
@@ -680,7 +677,8 @@ script.on_event(defines.events.on_gui_click, function(event)
 					if (not center) then
 						center = player.gui.center.add{type = "frame", name = "stats_center_frame", direction = "vertical"}
 					end
-					if center.fluids_table then center.destroy()
+					if center.fluids_table then 
+						center.destroy()
 					else
 						local fluids_table = center.add{type = "table", colspan = 12, name = "fluids_table", style = "slot_table_style"}
 						for _, fluid in pairs(game.fluid_prototypes) do
@@ -759,6 +757,11 @@ function debugPrint(thing)
 	for _, player in pairs(game.players) do
 		player.print(serpent.block(thing))
 	end
+end
+
+local logRoot = "[Production-Monitor] "
+function logToPlayer(player, msg)
+	player.print(logRoot .. msg)
 end
 
 function fmtNumber(amount, precision)

@@ -68,8 +68,7 @@ data:extend(
     default_value = false,
 	order = "c1",
    },
-
-    {
+   {
 	type = "int-setting",
 	name = "production-monitor-columns",
 	setting_type = "runtime-per-user",
@@ -77,6 +76,21 @@ data:extend(
 	minimum_value = 1,
 	maximum_value = 100,
 	order = "c2",
+   },
+   {
+	type = "string-setting",
+	name = "production-monitor-default-items",
+	setting_type = "runtime-per-user",
+    default_value = "science-pack-1, science-pack-2, science-pack-3, military-science-pack, production-science-pack, high-tech-science-pack, space-science-pack"
+		,
+	order = "d0",
+   },
+   {
+	type = "string-setting",
+	name = "production-monitor-default-fluids",
+	setting_type = "runtime-per-user",
+    default_value = "crude-oil, petroleum-gas",
+	order = "d1",
    },
 }
 )
