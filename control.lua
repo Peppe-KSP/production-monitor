@@ -2,6 +2,7 @@ require("mod-gui")
 
 local tickRate = settings.global["production-monitor-update-seconds"].value * 60
 local perMinute = 3600 / tickRate
+local zero = .01
 local noValue = "-"
 local displayUoM = "/m"
 local settingsIcon = "add"
@@ -88,7 +89,6 @@ function removeItem (player, itemToRemove)
 	local items = global.stats.playerPrefs[player.name].items
 	for i, name in ipairs(items) do
     	if (name == itemToRemove) then
-			-- debugPrint("Stats Removed: " .. name)
 			table.remove(items, i)
 			break
 		end
@@ -99,7 +99,6 @@ function removeFluid (player, fluidToRemove)
 	local fluids = global.stats.playerPrefs[player.name].fluids
 	for i, name in ipairs(fluids) do
     	if (name == fluidToRemove) then
-			-- debugPrint("Stats Removed: " .. name)
 			table.remove(fluids, i)
 			break
 		end
@@ -144,7 +143,6 @@ function addMonitor (list, target, index)
 	if (index) then
 		index = math.max(1, index)
 		index = math.min(size, index)
-		--debugPrint(index)
 		table.insert(list, index, target)
 	else
 		table.insert(list, target)
@@ -296,8 +294,7 @@ function updateDisplayPlayer (player, forceName, stats, mod_settings)
 			local calc = {}
 			calc.rate = 			calcRate(stats.items[itemName], global.stats[forceName].items[itemName])
 			calc.rateConsumed =  	calcRate(stats.itemsConsumed[itemName], global.stats[forceName].itemsConsumed[itemName])
-			calc.ratio = 			calcRatio(calc.rate, calc.rateConsumed)
-			calc.difference = 		calcDifference(calc.rate, calc.rateConsumed)
+			calc = averageCalc(calc, player_settings.itemStats[itemName])
 
 			player_settings.itemStatsPrev[itemName] = player_settings.itemStats[itemName]
 			player_settings.itemStats[itemName] = calc
@@ -314,8 +311,7 @@ function updateDisplayPlayer (player, forceName, stats, mod_settings)
 			local calc = {}
 			calc.rate = 			calcRate(stats.fluids[fluidName], global.stats[forceName].fluids[fluidName])
 			calc.rateConsumed =  	calcRate(stats.fluidsConsumed[fluidName], global.stats[forceName].fluidsConsumed[fluidName])
-			calc.ratio = 			calcRatio(calc.rate, calc.rateConsumed)
-			calc.difference = 		calcDifference(calc.rate, calc.rateConsumed)
+			calc = averageCalc(calc, player_settings.fluidStats[itemName])
 
 			player_settings.fluidStatsPrev[fluidName] = player_settings.fluidStats[fluidName]
 			player_settings.fluidStats[fluidName] = calc
@@ -332,11 +328,33 @@ function updateDisplayPlayer (player, forceName, stats, mod_settings)
 	end
 end
 
+function averageCalc (newCalc, oldCalc)
+	if newCalc and oldCalc then
+		newCalc.rate = average (newCalc.rate, oldCalc.rate)
+		newCalc.rateConsumed = average (newCalc.rateConsumed, oldCalc.rateConsumed)
+	end
+	newCalc.ratio = calcRatio(newCalc.rate, newCalc.rateConsumed)
+	newCalc.difference = calcDifference(newCalc.rate, newCalc.rateConsumed)
+	return newCalc
+end
+
+function average (new, old)
+	if old and new then
+		local rate = (new*(.1) + old*(.9)  )
+		if rate > zero then
+			return rate
+		else
+			return 0
+		end
+	end
+	return new
+end
+
 function calcRate (new, old)
 	if old and new then
 		return (new - old) * perMinute
 	end
-	return nil
+	return new
 end
 
 function calcDifference (production, consumption)
@@ -347,9 +365,15 @@ function calcDifference (production, consumption)
 end
 
 function calcRatio (production, consumption)
-	if production and consumption and consumption > 0 then
-		return (production / consumption)
+	if production and consumption then
+		if consumption > zero then
+			return (production / consumption)
+		end
+		if production > 0 and consumption == 0 then
+			return 100
+		end
 	end
+
 	return nil
 end
 
@@ -583,7 +607,6 @@ function applyTrend (label, smoothValue, rawCaption)
 end
 
 function applyStopLight  (label, smoothValue, minValue)
-	minValue = minValue / 10
 	if smoothValue >= (1 + minValue) then
 		label.style.font_color = upTrend
 	elseif smoothValue < .35 then
@@ -610,20 +633,28 @@ end
 function updateDisplayLabel (label, value, oldValue, precision, style)
 	if label then
 		if value and oldValue then
-			local smoothValue =  (oldValue + value) / 2
-			local minValue = 5 / (math.pow(10, precision))
+			local smoothValue =  value
+			local minValue = .5 / (math.pow(10, precision))			
 			if (smoothValue > minValue) or style == "posNeg" then
-				if style == "stopLight" then
-					applyStopLight (label, smoothValue, minValue)
-				elseif "posNeg" then
-					applyPosNeg (label, smoothValue)
-				else
+				if not style then
 					applyTrend (label, smoothValue, oldValue)
-				end				
-				label.caption = fmtNumber( smoothValue, precision )
+				elseif style == "stopLight" then
+					applyStopLight (label, smoothValue, minValue)
+				elseif style == "posNeg" then
+					applyPosNeg (label, smoothValue)
+				end
+
+				if style == "stopLight" and smoothValue >= 100 then
+					label.caption = "∞"
+				else
+					label.caption = fmtNumber( smoothValue, precision )
+				end
+				
 			else
 				if style == "stopLight" then
 					label.style.font_color = redLight
+				else
+					label.style.font_color = flatTrend
 				end
 				label.caption = 0
 			end
@@ -773,7 +804,6 @@ function fmtNumber(amount, precision)
 	local million
 	local thousand
 
-	--debugPrint(amount)
 	if math.abs(amount) >= 1000000 then
 		million = true
 		amount = amount / 1000000
