@@ -52,6 +52,7 @@ function updateCalculations (player, forceName, mod_settings, sourceList,
 	forceProduction, forceconsumption, 
 	playerStats, playerStatsPrev,
 	isDisplayOnlyUpdate, isHidden)
+	local empty = true
 	for _, name in pairs (sourceList) do
 		if not isDisplayOnlyUpdate then
 			local calc = {}
@@ -68,6 +69,8 @@ function updateCalculations (player, forceName, mod_settings, sourceList,
 			addUpdateDisplay(name, player, mod_settings, playerStats[name], playerStatsPrev[name])
 		end
 	end
+
+	return empty
 end
 
 function averageCalc (newCalc, oldCalc, precision)

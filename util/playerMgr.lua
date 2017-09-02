@@ -162,18 +162,21 @@ function updateDisplayPlayer (player, forceName, stats, mod_settings)
 		player_settings.fluidStatsPrev = {}
 	end
 
-	local empty = true
-
-	updateCalculations(player, forceName, mod_settings, player_settings.items, 
+	local emptyItems = updateCalculations(player, forceName, mod_settings, player_settings.items, 
 		stats.items, stats.itemsConsumed, 
 		global.stats[forceName].items, global.stats[forceName].itemsConsumed,
 		player_settings.itemStats, player_settings.itemStatsPrev,
 		isDisplayOnlyUpdate, isHidden)
 
-	updateCalculations(player, forceName, mod_settings, player_settings.fluids,
+	local emptyfluids = updateCalculations(player, forceName, mod_settings, player_settings.fluids,
 		stats.fluids, stats.fluidsConsumed, 
 		global.stats[forceName].fluids, global.stats[forceName].fluidsConsumed,
 		player_settings.fluidStats, player_settings.fluidStatsPrev,
 		isDisplayOnlyUpdate, isHidden)
+
+
+	if (emptyItems and emptyfluids) or isHidden then
+		minDisplay(player, mod_settings)
+	end
 end
 

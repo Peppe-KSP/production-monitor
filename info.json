@@ -1,6 +1,6 @@
 {
   "name": "production-monitor",
-  "version": "0.15.16",
+  "version": "0.15.17",
   "title": "Production Statistics Monitor HUD",
   "author": "Peppe",
   "description": "Pin Items/Fluids to HUD to view production statistics, ratios, differentials. Quick open/close, customize order, location, precision. ",
