@@ -2,7 +2,7 @@ require("mod-gui")
 
 local tickRate = settings.global["production-monitor-update-seconds"].value * 60
 local perMinute = 3600 / tickRate
-local zero = .01
+local zero = .059
 local noValue = "-"
 local displayUoM = "/m"
 local settingsIcon = "add"
@@ -220,7 +220,7 @@ function playerModSettings (player)
 	
 	mod_settings["production-monitor-large"] 			= player.mod_settings["production-monitor-large"].value
 	mod_settings["production-monitor-top"] 				= player.mod_settings["production-monitor-top"].value
-	mod_settings["production-monitor-precision"] 		= player.mod_settings["production-monitor-precision"].value
+	mod_settings.precision 								= player.mod_settings["production-monitor-precision"].value
 	mod_settings["production-monitor-columns"] 			= player.mod_settings["production-monitor-columns"].value
 
 	
@@ -294,7 +294,7 @@ function updateDisplayPlayer (player, forceName, stats, mod_settings)
 			local calc = {}
 			calc.rate = 			calcRate(stats.items[itemName], global.stats[forceName].items[itemName])
 			calc.rateConsumed =  	calcRate(stats.itemsConsumed[itemName], global.stats[forceName].itemsConsumed[itemName])
-			calc = averageCalc(calc, player_settings.itemStats[itemName])
+			calc = averageCalc(calc, player_settings.itemStats[itemName], mod_settings.precision)
 
 			player_settings.itemStatsPrev[itemName] = player_settings.itemStats[itemName]
 			player_settings.itemStats[itemName] = calc
@@ -311,7 +311,7 @@ function updateDisplayPlayer (player, forceName, stats, mod_settings)
 			local calc = {}
 			calc.rate = 			calcRate(stats.fluids[fluidName], global.stats[forceName].fluids[fluidName])
 			calc.rateConsumed =  	calcRate(stats.fluidsConsumed[fluidName], global.stats[forceName].fluidsConsumed[fluidName])
-			calc = averageCalc(calc, player_settings.fluidStats[itemName])
+			calc = averageCalc(calc, player_settings.fluidStats[itemName], mod_settings.precision)
 
 			player_settings.fluidStatsPrev[fluidName] = player_settings.fluidStats[fluidName]
 			player_settings.fluidStats[fluidName] = calc
@@ -328,13 +328,14 @@ function updateDisplayPlayer (player, forceName, stats, mod_settings)
 	end
 end
 
-function averageCalc (newCalc, oldCalc)
+function averageCalc (newCalc, oldCalc, precision)
 	if newCalc and oldCalc then
-		newCalc.rate = average (newCalc.rate, oldCalc.rate)
-		newCalc.rateConsumed = average (newCalc.rateConsumed, oldCalc.rateConsumed)
+		precision = math.max(precision, 2)
+		newCalc.rate = round (average ( newCalc.rate, oldCalc.rate), precision)
+		newCalc.rateConsumed =  round (average ( newCalc.rateConsumed, oldCalc.rateConsumed), precision)
 	end
-	newCalc.ratio = calcRatio(newCalc.rate, newCalc.rateConsumed)
-	newCalc.difference = calcDifference(newCalc.rate, newCalc.rateConsumed)
+	newCalc.ratio = calcRatio( newCalc.rate, newCalc.rateConsumed)
+	newCalc.difference = calcDifference( newCalc.rate, newCalc.rateConsumed)
 	return newCalc
 end
 
@@ -359,7 +360,12 @@ end
 
 function calcDifference (production, consumption)
 	if production and consumption then
-		return (production - consumption)
+		local diff = (production - consumption)
+		if math.abs( diff ) > zero then
+			return diff
+		else
+			return 0
+		end
 	end
 	return nil
 end
@@ -484,7 +490,7 @@ function addUpdateDisplay(itemName, player, mod_settings, calc, calcPrev)
 	local showDiff = mod_settings["production-monitor-show-difference"]
 	local showRatio = mod_settings["production-monitor-show-ratio"]
 	
-	local precision = mod_settings["production-monitor-precision"]
+	local precision = mod_settings.precision
 
 	minDisplay(player, mod_settings)
 
@@ -620,10 +626,10 @@ function applyStopLight  (label, smoothValue, minValue)
 	end
 end
 
-function applyPosNeg  (label, smoothValue)
-	if smoothValue > 0 then
+function applyPosNeg  (label, smoothValue, minValue)
+	if smoothValue > minValue then
 		label.style.font_color = upTrend
-	elseif smoothValue < 0 then
+	elseif smoothValue < -minValue then
 		label.style.font_color = downTrend
 	else
 		label.style.font_color = flatTrend
@@ -633,34 +639,30 @@ end
 function updateDisplayLabel (label, value, oldValue, precision, style)
 	if label then
 		if value and oldValue then
-			local smoothValue =  value
+			local smoothValue = value
 			local minValue = .5 / (math.pow(10, precision))			
-			if (smoothValue > minValue) or style == "posNeg" then
-				if not style then
-					applyTrend (label, smoothValue, oldValue)
-				elseif style == "stopLight" then
-					applyStopLight (label, smoothValue, minValue)
-				elseif style == "posNeg" then
-					applyPosNeg (label, smoothValue)
-				end
 
-				if style == "stopLight" and smoothValue >= 100 then
-					label.caption = "∞"
-				else
-					label.caption = fmtNumber( smoothValue, precision )
-				end
-				
-			else
-				if style == "stopLight" then
-					label.style.font_color = redLight
-				else
-					label.style.font_color = flatTrend
-				end
-				label.caption = 0
+			if not style then
+				applyTrend (label, smoothValue, oldValue)
+			elseif style == "stopLight" then
+				applyStopLight (label, smoothValue, minValue)
+			elseif style == "posNeg" then
+				applyPosNeg (label, smoothValue, minValue)
 			end
+
+			if style == "stopLight" and smoothValue >= 100 then
+				label.caption = "∞"
+			else
+				label.caption = fmtNumber( smoothValue, precision, minValue)
+			end
+
+			if label.caption == "0" and not style == "stopLight" then
+				label.style.font_color = flatTrend
+			end
+
 		else
 			label.style.font_color = flatTrend
-			label.caption = fmtNumber(noValue, precision)
+			label.caption = fmtNumber(noValue, precision, 0)
 		end
 	end
 end
@@ -795,7 +797,7 @@ function logToPlayer(player, msg)
 	player.print(logRoot .. msg)
 end
 
-function fmtNumber(amount, precision)
+function fmtNumber(amount, precision, minValue)
 
 	if not amount or amount == noValue then
 		return amount
@@ -804,11 +806,13 @@ function fmtNumber(amount, precision)
 	local million
 	local thousand
 
-	if math.abs(amount) >= 1000000 then
+	local absAmount = math.abs(amount) 
+
+	if absAmount >= 1000000 then
 		million = true
 		amount = amount / 1000000
 		precision = precision + 2
-	elseif  math.abs(amount) >= 1000 then
+	elseif  absAmount >= 1000 then
 		thousand = true
 		amount = amount / 1000
 		precision = precision + 1
@@ -832,10 +836,18 @@ function fmtNumber(amount, precision)
 	return formatted
 end
 
-function round(val, decimal)
-  if (decimal) then
-    return math.floor( (val * 10^decimal) + 0.5) / (10^decimal)
-  else
-    return math.floor(val+0.5)
-  end
+function round(val, precision)
+	if val then
+		if math.abs(val) < 1 then
+			precision = math.max(precision, 1)
+		end
+
+		if precision then
+			return math.floor( (val * 10^precision) + 0.5) / (10^precision)
+		else
+			return math.floor(val+0.5)
+		end
+	else
+		return 0
+	end
 end
