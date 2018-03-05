@@ -8,6 +8,7 @@ local upTrend = {r=.8, g=1, b=.8}
 local flatTrend = {r=1, g=1, b=1}
 local warning = {r=.7, g=.7, b=0}
 local redLight = {r=1, g=.2, b=.2}
+local mouseButtonFilter = {"left", "right","middle"}
 
 function getAttachLocation (isTop)
 	local location = "left"
@@ -18,17 +19,17 @@ function getAttachLocation (isTop)
 end
 
 function getButtonStyle (large)
-	local style = "small_slot_button_style"
+	local style = "small_slot_button"
 	if large then
-		style = "slot_button_style"
+		style = "slot_button"
 	end
 	return style
 end
 
 function getLabelStyle (large)
-	local style = "bold_label_style"
+	local style = "bold_label"
 	if (large) then
-		style = "bold_label_style_large"
+		style = "stats_label_style_large"
 	end
 	return style
 end
@@ -106,9 +107,9 @@ script.on_event(defines.events.on_gui_click, function(event)
 					if center.fluids_table then 
 						center.destroy()
 					else
-						local fluids_table = center.add{type = "table", colspan = 12, name = "fluids_table", style = "slot_table_style"}
+						local fluids_table = center.add{type = "table", column_count = 12, name = "fluids_table", style = "slot_table"}
 						for _, fluid in pairs(game.fluid_prototypes) do
-							fluids_table.add{type = "sprite-button", name = "stats_fluid_selector_" .. fluid.name, sprite = "fluid/"..fluid.name, style = "slot_button_style", tooltip = fluid.localised_name}
+							fluids_table.add{type = "sprite-button", name = "stats_fluid_selector_" .. fluid.name, sprite = "fluid/"..fluid.name, style = "slot_button", tooltip = fluid.localised_name}
 						end
 					end
 				elseif (button == defines.mouse_button_type.right) then
@@ -202,10 +203,10 @@ function minDisplay (player, mod_settings)
 
 	if not item_flow then
 		item_flow = player.gui[attachLocation].add{type = "scroll-pane", name = "stats_item_flow"}
-		local item_table = item_flow.add{type = "table", colspan = colSpan, name = mod_settings.tableId, style=tableStyle}
+		local item_table = item_flow.add{type = "table", column_count = colSpan, name = mod_settings.tableId, style=tableStyle}
 
-		item_table.add{type = "sprite-button", name = "stats_show_settings", tooltip={"stats_show_settings_tip"}, 
-			sprite=settingsIcon, style = buttonStyle}
+		item_table.add{type = "sprite-button", name = "stats_show_settings", tooltip={"stats_show_settings_tip"},
+			sprite = settingsIcon, style = buttonStyle}
 
 		if not isHidden then
 			if showProduction then
@@ -317,7 +318,7 @@ function addUpdateDisplay(itemName, player, mod_settings, calc, calcPrev)
 		end
 
 		if btnName and not table[btnName] then
-			table.add{type = "sprite-button", name = btnName, tooltip=localised_name, sprite = sprite, style = buttonStyle}
+			table.add{type = "sprite-button", name = btnName, tooltip=localised_name, sprite = sprite, style = buttonStyle, mouse_button_filter = mouseButtonFilter}
 		end
 
 		if (showProduction) then

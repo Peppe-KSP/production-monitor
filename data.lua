@@ -10,11 +10,6 @@
     },
   })
 
-data.raw["gui-style"].default.bold_label_style_large = {
-      type = "label_style",
-      parent = "label_style",
-      font = "default-large-bold",
-}
 
 data.raw["gui-style"].default.stats_table_style = 
     {
@@ -72,3 +67,8 @@ data.raw["gui-style"].default.stats_table_style_large =
 
     }
 
+    data.raw["gui-style"].default["stats_label_style_large"] = {
+      type = "label_style",
+      parent = "label",
+      font = "default-large-bold",
+}
