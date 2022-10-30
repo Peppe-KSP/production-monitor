@@ -82,7 +82,7 @@ data:extend(
 	type = "string-setting",
 	name = "production-monitor-default-items",
 	setting_type = "runtime-per-user",
-    default_value = "science-pack-1, science-pack-2, science-pack-3, military-science-pack, production-science-pack, high-tech-science-pack, space-science-pack"
+    default_value = "automation-science-pack, logistic-science-pack, chemical-science-pack, military-science-pack, production-science-pack, utility-science-pack, space-science-pack"
 		,
 	order = "d0",
    },

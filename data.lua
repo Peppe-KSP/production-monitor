@@ -32,7 +32,7 @@ data.raw["gui-style"].default.stats_table_style =
         type = "composition",
         filename = "__core__/graphics/gui.png",
         priority = "extra-high-no-scale",
-        corner_size = {0, 0},
+        corner_size = {1, 1},
         position = {78, 18},
         opacity = 0.2
       }
@@ -60,7 +60,7 @@ data.raw["gui-style"].default.stats_table_style_large =
         type = "composition",
         filename = "__core__/graphics/gui.png",
         priority = "extra-high-no-scale",
-        corner_size = {0, 0},
+        corner_size = {1, 1},
         position = {78, 18},
         opacity = 0.4
       }

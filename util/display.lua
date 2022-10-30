@@ -19,7 +19,7 @@ function getAttachLocation (isTop)
 end
 
 function getButtonStyle (large)
-	local style = "small_slot_button"
+	local style = "tool_button"
 	if large then
 		style = "slot_button"
 	end
@@ -52,7 +52,7 @@ function applyTrend (label, smoothValue, rawCaption)
 	end
 end
 
-function applyStopLight  (label, smoothValue, minValue)
+function applyStopLight (label, smoothValue, minValue)
 	if smoothValue >= (1 + minValue) then
 		label.style.font_color = upTrend
 	elseif smoothValue < .35 then
@@ -66,7 +66,7 @@ function applyStopLight  (label, smoothValue, minValue)
 	end
 end
 
-function applyPosNeg  (label, smoothValue, minValue)
+function applyPosNeg (label, smoothValue, minValue)
 	if smoothValue > minValue then
 		label.style.font_color = upTrend
 	elseif smoothValue < -minValue then
@@ -74,6 +74,14 @@ function applyPosNeg  (label, smoothValue, minValue)
 	else
 		label.style.font_color = flatTrend
 	end
+end
+
+function sortItems (a, b)
+    if a.itemtype == b.itemtype then
+        return a.name < b.name 
+    else
+        return a.itemtype < b.itemtype  
+    end
 end
 
 script.on_event(defines.events.on_gui_click, function(event)
@@ -94,25 +102,64 @@ script.on_event(defines.events.on_gui_click, function(event)
 			productionMonitorEvent = true
 			applyModifer = checkModifier(mod_settings.modifier, ctr, alt, shift)
 		end
+		
+        center = player.gui.center.stats_center
 
 		if event.element.name == "stats_show_settings" then
-			if player.cursor_stack.valid_for_read then
+			if player.cursor_stack ~= nil and player.cursor_stack.valid_for_read then
 				addItem(player, player.cursor_stack.name)
 				productionMonitorEvent=true
 			else
-				if button == defines.mouse_button_type.left then
-					if (not center) then
-						center = player.gui.center.add{type = "frame", name = "stats_center_frame", direction = "vertical"}
+                if (not center) then
+                    center = player.gui.center.add({type = "frame",name = "stats_center",direction = "vertical"})
+                    center.style.maximal_height=800 
+                end
+                centeri = center.stats_center_item_frame
+                centerf = center.stats_center_fluid_frame
+                
+                if (button == defines.mouse_button_type.left and applyModifer) or (button == defines.mouse_button_type.middle) then   
+                    if centerf then 
+                        centerf.destroy()
+                    end
+                    if (not centeri) then
+						centeri = center.add{type = "scroll-pane", name = "stats_center_item_frame", direction = "vertical"}
 					end
-					if center.fluids_table then 
+					if centeri.items_table then 
 						center.destroy()
 					else
-						local fluids_table = center.add{type = "table", column_count = 12, name = "fluids_table", style = "slot_table"}
+						local items_table = centeri.add{type = "table", column_count = 16, name = "items_table", style = "slot_table"}
+
+
+                        sortedItems = {}
+                        for _, item in pairs(game.item_prototypes) do
+                            table.insert(sortedItems, {type = "sprite-button", name = "stats_item_selector_" .. item.name, sprite = "item/"..item.name, style = "slot_button", tooltip = item.localised_name, itemtype=item.type})
+                        end
+
+                        table.sort(sortedItems, sortItems )
+                        
+						for _, item in pairs(sortedItems) do
+							items_table.add(item)
+						end
+					end
+                elseif button == defines.mouse_button_type.left then
+                    if centeri then 
+                        centeri.destroy()
+                    end
+                    
+					if (not centerf) then
+						centerf = center.add{type = "scroll-pane", name = "stats_center_fluid_frame", direction = "vertical"}
+            
+					end
+					if centerf.fluids_table then 
+						center.destroy()
+					else
+						local fluids_table = centerf.add{type = "table", column_count = 16, name = "fluids_table", style = "slot_table"}
 						for _, fluid in pairs(game.fluid_prototypes) do
 							fluids_table.add{type = "sprite-button", name = "stats_fluid_selector_" .. fluid.name, sprite = "fluid/"..fluid.name, style = "slot_button", tooltip = fluid.localised_name}
 						end
 					end
 				elseif (button == defines.mouse_button_type.right) then
+                    center.destroy()
 					local hide = global.stats.playerPrefs[player.name].hide
 					if hide then
 						global.stats.playerPrefs[player.name].hide = false
@@ -124,6 +171,10 @@ script.on_event(defines.events.on_gui_click, function(event)
 			end
 		elseif event.element.name:find("stats_fluid_selector_") then
 			addFluid (player, event.element.name:sub(22))
+            center.destroy()
+			productionMonitorEvent=true
+        elseif event.element.name:find("stats_item_selector_") then
+			addItem (player, event.element.name:sub(21))
 			center.destroy()
 			productionMonitorEvent=true
 		elseif event.element.name:find("stats_fluid_button_") then
@@ -206,7 +257,7 @@ function minDisplay (player, mod_settings)
 		local item_table = item_flow.add{type = "table", column_count = colSpan, name = mod_settings.tableId, style=tableStyle}
 
 		item_table.add{type = "sprite-button", name = "stats_show_settings", tooltip={"stats_show_settings_tip"},
-			sprite = settingsIcon, style = buttonStyle}
+			sprite = settingsIcon, style = buttonStyle, mouse_button_filter = mouseButtonFilter}
 
 		if not isHidden then
 			if showProduction then
@@ -256,15 +307,15 @@ function addUpdateDisplay(itemName, player, mod_settings, calc, calcPrev)
 	local buttonStyle = getButtonStyle(large)
 	local labelStyle = getLabelStyle(large)
 	local labelName
-
-	if game.item_prototypes[itemName] then
-		sprite = "item/"..itemName
-		localised_name = game.item_prototypes[itemName].localised_name
-		btnName = "stats_item_button_".. itemName
-	elseif game.fluid_prototypes[itemName] then		
+	
+	if game.fluid_prototypes[itemName] then		
 		sprite = "fluid/"..itemName
 		localised_name = game.fluid_prototypes[itemName].localised_name
 		btnName = "stats_fluid_button_".. itemName
+	elseif game.item_prototypes[itemName] then
+		sprite = "item/"..itemName
+		localised_name = game.item_prototypes[itemName].localised_name
+		btnName = "stats_item_button_".. itemName
 	end
 
 	local table = player.gui[attachLocation].stats_item_flow[mod_settings.tableId]

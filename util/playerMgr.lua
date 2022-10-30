@@ -146,6 +146,10 @@ function updateDisplayPlayer (player, forceName, stats, mod_settings)
 	end
 	local isHidden = global.stats.playerPrefs[player.name].hide
 
+	if player.controller_type == defines.controllers.cutscene then
+		isHidden = true
+	end
+
 	if not player_settings.itemStats then
 		player_settings.itemStats = {}
 	end
