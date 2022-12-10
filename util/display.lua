@@ -231,6 +231,7 @@ function minDisplay (player, mod_settings)
 	local showConsumption = mod_settings["production-monitor-show-consumption"]
 	local showDiff = mod_settings["production-monitor-show-difference"]
 	local showRatio = mod_settings["production-monitor-show-ratio"]
+	local showOverall = mod_settings["production-monitor-show-overall"]
 	local colSpan = mod_settings.playerColspan
 	if isHidden then
 		colSpan = 1
@@ -278,6 +279,11 @@ function minDisplay (player, mod_settings)
 				item_table.add{type = "label", name = "stats_item_label_settings_ratio", caption = "P/C", 
 				style= labelStyle, tooltip={"stats_ratio"} }
 			end
+
+			if showOverall then
+				item_table.add{type = "label", name = "stats_item_label_settings_overall", caption = "Ov", 
+				style= labelStyle, tooltip={"stats_ratio"} }
+			end
 		end
 	else
 		if not item_flow[mod_settings.tableId] then			
@@ -293,6 +299,7 @@ function addUpdateDisplay(itemName, player, mod_settings, calc, calcPrev)
 	local showConsumption = mod_settings["production-monitor-show-consumption"]
 	local showDiff = mod_settings["production-monitor-show-difference"]
 	local showRatio = mod_settings["production-monitor-show-ratio"]
+	local showOverall = mod_settings["production-monitor-show-overall"]
 	
 	local precision = mod_settings.precision
 
@@ -356,6 +363,11 @@ function addUpdateDisplay(itemName, player, mod_settings, calc, calcPrev)
 			table[labelName].destroy()
 		end
 
+		labelName = "stats_item_label_overall_" .. itemName
+		if table[labelName] then
+			table[labelName].destroy()
+		end
+
 		removeItem(player, itemName)
 		removeFluid(player, itemName)
 	else
@@ -402,6 +414,14 @@ function addUpdateDisplay(itemName, player, mod_settings, calc, calcPrev)
 				table.add{type = "label", name = labelName,  tooltip=localised_name, style=labelStyle}
 			end
 			updateDisplayLabel(table[labelName], calc.ratio, calcPrev.ratio, math.max(1, precision), "stopLight")
+		end
+
+		if (showOverall) then
+			labelName = "stats_item_label_overall_" .. itemName
+			if not table[labelName] then
+				table.add{type = "label", name = labelName,  tooltip=localised_name, style=labelStyle}
+			end
+			updateDisplayLabel(table[labelName], calc.overall, 0, precision)
 		end
 	end
 end
@@ -468,12 +488,22 @@ function fmtNumber(amount, precision)
 		return amount
 	end
 	
+	local trillion
+	local billion
 	local million
 	local thousand
 
 	local absAmount = math.abs(amount) 
 
-	if absAmount >= 1000000 then
+	if absAmount >= 1000000000000 then
+		trillion = true
+		amount = amount / 1000000000000
+		precision = precision + 4
+	elseif absAmount >= 1000000000 then
+		billion = true
+		amount = amount / 1000000000
+		precision = precision + 3
+	elseif absAmount >= 1000000 then
 		million = true
 		amount = amount / 1000000
 		precision = precision + 2
@@ -491,6 +521,14 @@ function fmtNumber(amount, precision)
 		end
 	end
 
+	if trillion then
+		return formatted.."T"
+	end
+
+	if billion then
+		return formatted.."G"
+	end  
+	
 	if million then
 		return formatted.."M"
 	end
