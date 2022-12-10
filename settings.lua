@@ -53,7 +53,14 @@ data:extend(
     default_value = true,
 	order = "a4",
    },
-   	{
+	{
+	type = "bool-setting",
+	name = "production-monitor-show-overall",
+	setting_type = "runtime-per-user",
+    default_value = true,
+	order = "a5", 
+   },
+  {
 	type = "int-setting",
 	name = "production-monitor-precision",
 	setting_type = "runtime-per-user",

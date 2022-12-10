@@ -91,6 +91,7 @@ function playerModSettings (player)
 	mod_settings["production-monitor-show-consumption"] = player.mod_settings["production-monitor-show-consumption"].value
 	mod_settings["production-monitor-show-difference"] 	= player.mod_settings["production-monitor-show-difference"].value
 	mod_settings["production-monitor-show-ratio"] 		= player.mod_settings["production-monitor-show-ratio"].value
+	mod_settings["production-monitor-show-overall"] 		= player.mod_settings["production-monitor-show-overall"].value
 	
 	mod_settings["production-monitor-large"] 			= player.mod_settings["production-monitor-large"].value
 	mod_settings["production-monitor-top"] 				= player.mod_settings["production-monitor-top"].value
@@ -116,6 +117,10 @@ function playerModSettings (player)
 	if mod_settings["production-monitor-show-ratio"] then
 		mod_settings.fieldCount = mod_settings.fieldCount + 1
 		tableString = tableString .. "r"
+	end
+	if mod_settings["production-monitor-show-overall"] then
+		mod_settings.fieldCount = mod_settings.fieldCount + 1
+		tableString = tableString .. "o"
 	end
 
 	if mod_settings["production-monitor-large"] then

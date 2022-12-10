@@ -59,6 +59,7 @@ function updateCalculations (player, forceName, mod_settings, sourceList,
 			calc.rate = 			calcRate(production[name], forceProduction[name])
 			calc.rateConsumed =  	calcRate(consumption[name], forceconsumption[name])
 			calc = averageCalc(calc, playerStats[name], mod_settings.precision)
+			calc.overall = production[name]
 
 			playerStatsPrev[name] = playerStats[name]
 			playerStats[name] = calc
