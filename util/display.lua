@@ -282,7 +282,7 @@ function minDisplay (player, mod_settings)
 
 			if showOverall then
 				item_table.add{type = "label", name = "stats_item_label_settings_overall", caption = "Ov", 
-				style= labelStyle, tooltip={"stats_ratio"} }
+				style= labelStyle, tooltip={"stats_produced"} }
 			end
 		end
 	else
@@ -421,7 +421,7 @@ function addUpdateDisplay(itemName, player, mod_settings, calc, calcPrev)
 			if not table[labelName] then
 				table.add{type = "label", name = labelName,  tooltip=localised_name, style=labelStyle}
 			end
-			updateDisplayLabel(table[labelName], calc.overall, 0, precision)
+			updateDisplayLabel(table[labelName], calc.overall, calcPrev.overall, precision)
 		end
 	end
 end
