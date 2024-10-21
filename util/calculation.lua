@@ -3,11 +3,18 @@ require("util/display")
 local zero = .059
 
 function updateStats (force, statsOnly)
-	local currentItemCount = force.item_production_statistics.input_counts
-	local currentFluidCount = force.fluid_production_statistics.input_counts
 
-	local currentItemCountConsumed = force.item_production_statistics.output_counts
-	local currentFluidCountConsumed = force.fluid_production_statistics.output_counts
+	local currentItemCount = {}
+	local currentFluidCount =  {}
+	local currentItemCountConsumed = {}
+	local currentFluidCountConsumed = {}
+
+	for k, surface in pairs(game.surfaces) do
+		currentItemCount = merge_surface_stats(currentItemCount, force.get_item_production_statistics(surface).input_counts)
+		currentFluidCount = merge_surface_stats(currentFluidCount, force.get_fluid_production_statistics(surface).input_counts)
+		currentItemCountConsumed = merge_surface_stats(currentItemCountConsumed, force.get_item_production_statistics(surface).output_counts)
+		currentFluidCountConsumed = merge_surface_stats(currentFluidCountConsumed, force.get_fluid_production_statistics(surface).output_counts)
+	end
 
 	local stats = {}
 	stats.items =currentItemCount
@@ -16,27 +23,39 @@ function updateStats (force, statsOnly)
 	stats.fluidsConsumed = currentFluidCountConsumed
 
 	local forceName = force.name
-	if (global.stats == nil) then
-		global.stats = {}
+	if (storage.stats == nil) then
+		storage.stats = {}
 	end
 
-	if (global.stats.playerPrefs == nil) then
-		global.stats.playerPrefs = {}
+	if (storage.stats.playerPrefs == nil) then
+		storage.stats.playerPrefs = {}
 	end
 
-	if (global.stats[forceName] == nil) then
-		global.stats[forceName] = stats
+	if (storage.stats[forceName] == nil) then
+		storage.stats[forceName] = stats
 	end
 
 	if not statsOnly then
 		updateDisplayForce (force, stats)
 	end
 
-	global.stats[forceName].items = currentItemCount
-	global.stats[forceName].fluids = currentFluidCount
+	storage.stats[forceName].items = currentItemCount
+	storage.stats[forceName].fluids = currentFluidCount
 	
-	global.stats[forceName].itemsConsumed = currentItemCountConsumed
-	global.stats[forceName].fluidsConsumed = currentFluidCountConsumed
+	storage.stats[forceName].itemsConsumed = currentItemCountConsumed
+	storage.stats[forceName].fluidsConsumed = currentFluidCountConsumed
+end
+
+function merge_surface_stats (current, new)
+	for key, name in pairs(new) do
+		if current[key] ~= nil then
+			current[key] = current[key] + new[key]
+		else
+			current[key] = new[key]
+		end
+	end
+
+	return current
 end
 
 function updateDisplayForce (force, stats)
@@ -99,7 +118,7 @@ end
 
 function calcRate (new, old)
 	if old and new then
-		return (new - old) * global.stats.perMinute
+		return (new - old) * storage.stats.perMinute
 	end
 	return new
 end

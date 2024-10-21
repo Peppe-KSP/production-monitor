@@ -1,10 +1,10 @@
 function removeItem (player, itemToRemove)
-	local items = global.stats.playerPrefs[player.name].items
+	local items = storage.stats.playerPrefs[player.name].items
     removeFromList(items, itemToRemove)
 end
 
 function removeFluid (player, fluidToRemove)
-	local fluids = global.stats.playerPrefs[player.name].fluids
+	local fluids = storage.stats.playerPrefs[player.name].fluids
     removeFromList(fluids, fluidToRemove)
 end
 
@@ -18,12 +18,12 @@ function removeFromList (list, target)
 end
 
 function getItemIndex (player, itemToFind)
-	local items = global.stats.playerPrefs[player.name].items
+	local items = storage.stats.playerPrefs[player.name].items
 	return getIndex(items, itemToFind)
 end
 
 function getFluidIndex (player, fluidToFind)
-	local fluids = global.stats.playerPrefs[player.name].fluids
+	local fluids = storage.stats.playerPrefs[player.name].fluids
 	return getIndex(fluids, fluidToFind)
 end
 
@@ -37,11 +37,11 @@ function getIndex (list, target)
 end
 
 function addItem (player, itemToAdd, index)
-	addMonitor(global.stats.playerPrefs[player.name].items, itemToAdd, index)
+	addMonitor(storage.stats.playerPrefs[player.name].items, itemToAdd, index)
 end
 
 function replaceItem (player, itemToAdd, existingItem)
-	local items = global.stats.playerPrefs[player.name].items
+	local items = storage.stats.playerPrefs[player.name].items
 	for i, name in ipairs(items) do
     	if (name == itemToAdd) then
 			table.remove(items, i)
@@ -56,7 +56,7 @@ function replaceItem (player, itemToAdd, existingItem)
 end
 
 function addFluid (player, fluidToAdd, index)
-	addMonitor(global.stats.playerPrefs[player.name].fluids, fluidToAdd, index)
+	addMonitor(storage.stats.playerPrefs[player.name].fluids, fluidToAdd, index)
 end
 
 function addMonitor (list, target, index)

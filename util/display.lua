@@ -131,7 +131,7 @@ script.on_event(defines.events.on_gui_click, function(event)
 
 
                         sortedItems = {}
-                        for _, item in pairs(game.item_prototypes) do
+                        for _, item in pairs(prototypes.item) do
                             table.insert(sortedItems, {type = "sprite-button", name = "stats_item_selector_" .. item.name, sprite = "item/"..item.name, style = "slot_button", tooltip = item.localised_name, itemtype=item.type})
                         end
 
@@ -154,17 +154,17 @@ script.on_event(defines.events.on_gui_click, function(event)
 						center.destroy()
 					else
 						local fluids_table = centerf.add{type = "table", column_count = 16, name = "fluids_table", style = "slot_table"}
-						for _, fluid in pairs(game.fluid_prototypes) do
+						for _, fluid in pairs(prototypes.fluid) do
 							fluids_table.add{type = "sprite-button", name = "stats_fluid_selector_" .. fluid.name, sprite = "fluid/"..fluid.name, style = "slot_button", tooltip = fluid.localised_name}
 						end
 					end
 				elseif (button == defines.mouse_button_type.right) then
                     center.destroy()
-					local hide = global.stats.playerPrefs[player.name].hide
+					local hide = storage.stats.playerPrefs[player.name].hide
 					if hide then
-						global.stats.playerPrefs[player.name].hide = false
+						storage.stats.playerPrefs[player.name].hide = false
 					else
-						global.stats.playerPrefs[player.name].hide = true
+						storage.stats.playerPrefs[player.name].hide = true
 					end
 					productionMonitorEvent=true
 				end
@@ -221,7 +221,7 @@ end)
 
 function minDisplay (player, mod_settings)
 	local attachLocation = getAttachLocation(mod_settings["production-monitor-top"])
-	local isHidden = global.stats.playerPrefs[player.name].hide
+	local isHidden = storage.stats.playerPrefs[player.name].hide
 
 	local large = mod_settings["production-monitor-large"]
 	local buttonStyle = getButtonStyle(large)
@@ -315,13 +315,13 @@ function addUpdateDisplay(itemName, player, mod_settings, calc, calcPrev)
 	local labelStyle = getLabelStyle(large)
 	local labelName
 	
-	if game.fluid_prototypes[itemName] then		
+	if prototypes.fluid[itemName] then		
 		sprite = "fluid/"..itemName
-		localised_name = game.fluid_prototypes[itemName].localised_name
+		localised_name = prototypes.fluid[itemName].localised_name
 		btnName = "stats_fluid_button_".. itemName
-	elseif game.item_prototypes[itemName] then
+	elseif prototypes.item[itemName] then
 		sprite = "item/"..itemName
-		localised_name = game.item_prototypes[itemName].localised_name
+		localised_name = prototypes.item[itemName].localised_name
 		btnName = "stats_item_button_".. itemName
 	end
 
